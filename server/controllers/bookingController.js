@@ -134,6 +134,7 @@ exports.createBooking = async (req, res) => {
 
 
 
+
         // Update seats from locked to booked
         const bookedSeats = [];
         seats.forEach(seatNum => {
@@ -141,7 +142,7 @@ exports.createBooking = async (req, res) => {
             // Allow if locked by session OR if status is 'available' (race condition fallback, though risky without lock)
             // Sticking to strict lock check for safety
             if (seat && seat.lockedBy === sessionId) {
-                console.log(`Updating seat ${seatNum} from ${seat.status} to booked`);
+                console.log(`[BOOKING] Updating seat ${seatNum} from ${seat.status} to booked`);
                 seat.status = 'booked';
                 seat.bookedBy = req.user._id;
                 seat.lockedBy = null;
@@ -158,14 +159,24 @@ exports.createBooking = async (req, res) => {
         });
 
         if (bookedSeats.length !== seats.length) {
-            console.error(`Seat booking mismatch: requested ${seats.length}, booked ${bookedSeats.length}`);
+            console.error(`[BOOKING ERROR] Seat booking mismatch: requested ${seats.length}, booked ${bookedSeats.length}`);
             return res.status(400).json({ message: 'Some seats could not be booked or lock expired' });
         }
 
         // Save showtime with updated seat statuses
         showtime.markModified('seats');
         await showtime.save();
-        console.log(`Showtime ${showtimeId} saved with ${bookedSeats.length} booked seats`);
+        console.log(`[BOOKING] Showtime ${showtimeId} saved with ${bookedSeats.length} booked seats`);
+
+        // Verify seats were actually saved as booked
+        const verifyShowtime = await Showtime.findById(showtimeId);
+        const verifyBooked = verifyShowtime.seats.filter(s => seats.includes(s.seatNumber) && s.status === 'booked');
+        console.log(`[BOOKING VERIFY] ${verifyBooked.length}/${seats.length} seats confirmed as booked in database`);
+
+        if (verifyBooked.length !== seats.length) {
+            console.error(`[BOOKING ERROR] Seat status verification failed!`);
+        }
+
 
         // Sanitize seats to ensure schema compliance
         const safeSeats = bookedSeats.map(s => ({
