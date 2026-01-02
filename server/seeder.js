@@ -265,9 +265,9 @@ const importData = async () => {
             });
         };
 
-        // Generate PERMANENT showtimes for next 7 days for ALL movies
+        // Generate PERMANENT showtimes for next 2 days for ALL movies
         // This ensures showtimes are always available and unique per movie
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 2; i++) {
             movies.forEach((movie, mIndex) => {
                 // Determine theater and screen based on movie index
                 const theaterIdx = mIndex % 2;
