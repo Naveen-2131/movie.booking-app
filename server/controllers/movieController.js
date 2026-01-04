@@ -79,13 +79,14 @@ exports.getShowtimesForMovie = async (req, res) => {
 
         if (showtimes.length === 0 && isFutureQuery) {
             console.log(`No showtimes found for movie ${req.params.id}. Generating new showtimes...`);
-            await generateShowtimesForMovie(req.params.id);
+            // Generate only for the next 2 days as requested
+            await generateShowtimesForMovie(req.params.id, 2);
 
             // Re-fetch after generation
-            // Reset query if it was specific date that might have been empty, 
+            // Reset query if it was specific date that might have been empty,
             // but usually we just want to fetch what we just created.
-            // If the user asked for a specific date and we just generated showtimes, 
-            // we should be able to find them now if the date was within the generation window (7 days).
+            // If the user asked for a specific date and we just generated showtimes,
+            // we should be able to find them now if the date was within the generation window.
 
             // Simple re-run of the same query
             showtimes = await Showtime.find(query)
