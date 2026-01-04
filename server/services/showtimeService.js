@@ -54,6 +54,13 @@ const generateShowtimesForMovie = async (movieId, daysToGenerate = 7) => {
         // simplified hash of objectId
         const movieOffset = parseInt(movieId.toString().slice(-4), 16);
 
+        // CRITICAL FIX: Clear ANY existing future showtimes for this movie to prevent duplicates or excessive dates
+        // This ensures that when we generate, we are starting fresh from "Today"
+        await Showtime.deleteMany({
+            movie: movieId,
+            startTime: { $gte: new Date() }
+        });
+
         for (let i = 0; i < daysToGenerate; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() + i);
