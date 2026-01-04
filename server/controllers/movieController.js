@@ -1,6 +1,7 @@
 const Movie = require('../models/Movie');
 const Showtime = require('../models/Showtime');
 const tmdbService = require('../services/tmdbService');
+const { generateShowtimesForMovie } = require('../services/showtimeService');
 
 // Public routes
 exports.getMovies = async (req, res) => {
@@ -53,6 +54,7 @@ exports.getShowtimesForMovie = async (req, res) => {
         const { date, city } = req.query;
         let query = { movie: req.params.id, isActive: true };
 
+        // Determine the time range we are looking for
         if (date) {
             const startDate = new Date(date);
             startDate.setHours(0, 0, 0, 0);
@@ -60,7 +62,7 @@ exports.getShowtimesForMovie = async (req, res) => {
             endDate.setHours(23, 59, 59, 999);
             query.startTime = { $gte: startDate, $lte: endDate };
         } else {
-            // By default, only show upcoming showtimes
+            // By default, show upcoming showtimes only
             query.startTime = { $gte: new Date() };
         }
 
@@ -68,6 +70,29 @@ exports.getShowtimesForMovie = async (req, res) => {
             .populate('theater')
             .populate('movie')
             .sort({ startTime: 1 });
+
+        // AUTO-GENERATION LOGIC
+        // If no showtimes found and we are looking for future/upcoming slots, generate them
+        // We only generate if no specific date filter is applied, OR if the date filter is for today/future
+        // and absolutely no showtimes were returned.
+        const isFutureQuery = !date || new Date(date) >= new Date(new Date().setHours(0, 0, 0, 0));
+
+        if (showtimes.length === 0 && isFutureQuery) {
+            console.log(`No showtimes found for movie ${req.params.id}. Generating new showtimes...`);
+            await generateShowtimesForMovie(req.params.id);
+
+            // Re-fetch after generation
+            // Reset query if it was specific date that might have been empty, 
+            // but usually we just want to fetch what we just created.
+            // If the user asked for a specific date and we just generated showtimes, 
+            // we should be able to find them now if the date was within the generation window (7 days).
+
+            // Simple re-run of the same query
+            showtimes = await Showtime.find(query)
+                .populate('theater')
+                .populate('movie')
+                .sort({ startTime: 1 });
+        }
 
         if (city) {
             showtimes = showtimes.filter(st => st.theater.city === city);
