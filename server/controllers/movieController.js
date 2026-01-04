@@ -63,7 +63,16 @@ exports.getShowtimesForMovie = async (req, res) => {
             query.startTime = { $gte: startDate, $lte: endDate };
         } else {
             // By default, show upcoming showtimes only
-            query.startTime = { $gte: new Date() };
+            // LIMIT: Show only Today and Tomorrow (Next 2 days)
+            const today = new Date();
+            const limitDate = new Date(today);
+            limitDate.setDate(today.getDate() + 2); // Today + 2 days
+            limitDate.setHours(0, 0, 0, 0); // Start of the 3rd day
+
+            query.startTime = {
+                $gte: new Date(),
+                $lt: limitDate
+            };
         }
 
         let showtimes = await Showtime.find(query)
