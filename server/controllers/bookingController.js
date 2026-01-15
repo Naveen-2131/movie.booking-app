@@ -138,6 +138,7 @@ exports.createBooking = async (req, res) => {
         // Update seats from locked to booked
         const bookedSeats = [];
         seats.forEach(seatNum => {
+            const seat = showtime.seats.find(s => s.seatNumber === seatNum);
             if (seat) {
                 // Robustness: Allow if locked by session OR if it's currently available (fallback)
                 // This ensures that even if lock expires *just* before this call, the booking succeeds if no one else took it.
