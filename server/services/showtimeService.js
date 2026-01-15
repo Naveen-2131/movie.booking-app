@@ -82,9 +82,12 @@ const generateShowtimesForMovie = async (movieId, daysToGenerate = 7) => {
 
                 // Select 3 slots per day per theater for this movie
                 // Use the random-ish movieOffset to pick different slots for different movies
-                const slot1Idx = (movieOffset + i * 2) % allTimeSlots.length;
-                const slot2Idx = (movieOffset + i * 2 + 7) % allTimeSlots.length;
-                const slot3Idx = (movieOffset + i * 2 + 14) % allTimeSlots.length;
+                // Use a more random offset to prevent identical schedules
+                // Mix movie ID chars + day index + theater index + random value
+                const randomOffset = Math.floor(Math.random() * 5);
+                const slot1Idx = (movieOffset + i * 3 + tIndex + randomOffset) % allTimeSlots.length;
+                const slot2Idx = (movieOffset + i * 3 + tIndex + 7 + randomOffset) % allTimeSlots.length;
+                const slot3Idx = (movieOffset + i * 3 + tIndex + 14 + randomOffset) % allTimeSlots.length;
 
                 const selectedSlots = [allTimeSlots[slot1Idx], allTimeSlots[slot2Idx], allTimeSlots[slot3Idx]];
 
