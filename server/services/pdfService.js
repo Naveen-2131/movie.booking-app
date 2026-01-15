@@ -27,6 +27,18 @@ exports.generateTicketPDF = async (booking, user, movie, theater, showtime) => {
                 .text('🎬 MOVIE TICKET', { align: 'center' })
                 .moveDown(0.5);
 
+            // Cancelled Watermark
+            if (booking.status === 'cancelled') {
+                doc.save();
+                doc.rotate(-45, { origin: [300, 400] });
+                doc.fontSize(60)
+                    .fillColor('red')
+                    .opacity(0.5)
+                    .text('CANCELLED', 100, 400, { align: 'center' });
+                doc.restore();
+                doc.opacity(1); // Reset opacity
+            }
+
             doc.fontSize(10)
                 .fillColor('#6B7280')
                 .text('Your booking confirmation', { align: 'center' })
@@ -72,16 +84,26 @@ exports.generateTicketPDF = async (booking, user, movie, theater, showtime) => {
                 .text(theater.city, 50, detailsY + 47);
 
             const showDate = new Date(showtime.startTime);
-            const dateStr = showDate.toLocaleDateString('en-US', {
+            // MANUAL OFFSET FIX: Force add 5.5 hours to UTC time to get IST
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const istDate = new Date(showDate.getTime() + istOffset);
+
+            const dateStr = istDate.toLocaleDateString('en-IN', {
                 weekday: 'short',
                 year: 'numeric',
                 month: 'short',
-                day: 'numeric'
+                day: 'numeric',
+                timeZone: 'UTC' // Important: Treat the shifted date as UTC to avoid double shifting
             });
-            const timeStr = showDate.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+
+            // Format time manually to ensure 12-hour format with AM/PM
+            let hours = istDate.getUTCHours();
+            const minutes = istDate.getUTCMinutes();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+            const timeStr = `${hours}:${minutesStr} ${ampm}`;
 
             doc.fontSize(10)
                 .fillColor('#6B7280')
@@ -112,7 +134,7 @@ exports.generateTicketPDF = async (booking, user, movie, theater, showtime) => {
                 .text('TOTAL AMOUNT', 50)
                 .fontSize(16)
                 .fillColor('#059669')
-                .text(`₹${booking.totalPrice}`, 50)
+                .text(`Rs. ${booking.totalPrice}`, 50)
                 .moveDown(2);
 
             // Divider
