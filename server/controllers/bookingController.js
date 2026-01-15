@@ -138,23 +138,24 @@ exports.createBooking = async (req, res) => {
         // Update seats from locked to booked
         const bookedSeats = [];
         seats.forEach(seatNum => {
-            const seat = showtime.seats.find(s => s.seatNumber === seatNum);
-            // Allow if locked by session OR if status is 'available' (race condition fallback, though risky without lock)
-            // Sticking to strict lock check for safety
-            if (seat && seat.lockedBy === sessionId) {
-                console.log(`[BOOKING] Updating seat ${seatNum} from ${seat.status} to booked`);
-                seat.status = 'booked';
-                seat.bookedBy = req.user._id;
-                seat.lockedBy = null;
-                seat.lockedAt = null;
+            if (seat) {
+                // Robustness: Allow if locked by session OR if it's currently available (fallback)
+                // This ensures that even if lock expires *just* before this call, the booking succeeds if no one else took it.
+                if (seat.lockedBy === sessionId || seat.status === 'available') {
+                    console.log(`[BOOKING] Updating seat ${seatNum} from ${seat.status} to booked`);
+                    seat.status = 'booked';
+                    seat.bookedBy = req.user._id;
+                    seat.lockedBy = null;
+                    seat.lockedAt = null;
 
-                bookedSeats.push({
-                    seatNumber: seat.seatNumber,
-                    row: seat.row,
-                    col: seat.col,
-                    type: seat.type,
-                    price: seat.price
-                });
+                    bookedSeats.push({
+                        seatNumber: seat.seatNumber,
+                        row: seat.row,
+                        col: seat.col,
+                        type: seat.type,
+                        price: seat.price
+                    });
+                }
             }
         });
 
